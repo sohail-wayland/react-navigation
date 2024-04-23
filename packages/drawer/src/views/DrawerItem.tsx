@@ -1,5 +1,6 @@
 import { PlatformPressable } from '@react-navigation/elements';
 import { Link, useTheme } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Color from 'color';
 import * as React from 'react';
 import {
@@ -7,6 +8,7 @@ import {
   StyleProp,
   StyleSheet,
   Text,
+  TextInput,
   TextStyle,
   View,
   ViewStyle,
@@ -39,6 +41,10 @@ type Props = {
    * Function to execute on press.
    */
   onPress: () => void;
+    /**
+     * Function to execute on long press.
+     */
+  onLongPress?: () => void;
   /**
    * Color for the icon and label when the item is active.
    */
@@ -108,6 +114,7 @@ const LinkPressable = ({
   to?: string;
   children: React.ReactNode;
   onPress?: () => void;
+  onLongPress?: () => void; 
 }) => {
   if (Platform.OS === 'web' && to) {
     // React Native Web doesn't forward `onClick` if we use `TouchableWithoutFeedback`.
@@ -141,6 +148,7 @@ const LinkPressable = ({
         {...rest}
         accessibilityRole={accessibilityRole}
         onPress={onPress}
+        onLongPress={onLongPress}
       >
         <View style={style}>{children}</View>
       </PlatformPressable>
@@ -167,12 +175,37 @@ export default function DrawerItem(props: Props) {
     inactiveBackgroundColor = 'transparent',
     style,
     onPress,
+    onLongPress,
     pressColor,
     pressOpacity,
     testID,
     accessibilityLabel,
     ...rest
   } = props;
+
+  React.useEffect(() => {
+    // Load the friendlyName from storage when the component mounts
+    AsyncStorage.getItem(`friendlyName_${label}`).then(storedFriendlyName => {
+      if (storedFriendlyName) {
+        setFriendlyName(storedFriendlyName);
+      } else {
+        setFriendlyName(label); // Set friendlyName to label if no stored friendlyName
+      }
+    });
+  }, [label]);
+
+  const [baseName, setBaseName] = React.useState(label);
+  const [friendlyName, setFriendlyName] = React.useState('');
+  const [isEditing, setIsEditing] = React.useState(false);
+
+  const handleTextChange = () => {
+    // Limit the text to 20 characters
+    const limitedText = friendlyName.length > 20 ? friendlyName.slice(0, 20) : friendlyName;
+  
+    // Save the friendlyName to storage whenever it changes
+    AsyncStorage.setItem(`friendlyName_${label}`, limitedText);
+    setFriendlyName(limitedText);
+  };
 
   const { borderRadius = 4 } = StyleSheet.flatten(style || {});
   const color = focused ? activeTintColor : inactiveTintColor;
@@ -191,6 +224,9 @@ export default function DrawerItem(props: Props) {
       <LinkPressable
         testID={testID}
         onPress={onPress}
+        onLongPress={() => {
+          setIsEditing(true)
+        }}
         style={[styles.wrapper, { borderRadius }]}
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
@@ -204,10 +240,11 @@ export default function DrawerItem(props: Props) {
           <View
             style={[
               styles.label,
-              { marginLeft: iconNode ? 32 : 0, marginVertical: 5 },
+              { marginLeft: iconNode ? 32 : 0, marginVertical: 5, flexDirection: 'row', gap: 6, alignItems: 'center'}
             ]}
           >
             {typeof label === 'string' ? (
+                <>
               <Text
                 numberOfLines={1}
                 allowFontScaling={allowFontScaling}
@@ -221,6 +258,44 @@ export default function DrawerItem(props: Props) {
               >
                 {label}
               </Text>
+                
+            {isEditing &&  (
+                <TextInput
+                   value={friendlyName}
+                    onChangeText={setFriendlyName}
+                    onSubmitEditing={handleTextChange}
+                    onBlur={() => setIsEditing(false)}
+                    blurOnSubmit
+                    style={[
+                        {
+                            color,
+                            fontFamily: "AkhandSoft-Semibold",
+                            fontSize: 18,
+                            lineHeight: 18 * 1.1,
+                            //paddingBottom: 18 * 0.1
+                        },
+                    ]}
+                    autoFocus
+                />
+            )}
+
+            {!isEditing && friendlyName.length > 1 && (
+            <Text
+                numberOfLines={1}
+                allowFontScaling={allowFontScaling}
+                style={[
+                {
+                    color,
+                    fontFamily: "AkhandSoft-Semibold",
+                    fontSize: 18,
+                    lineHeight: 18 * 1.1,
+                },
+                ]}
+            >
+                {`(${friendlyName})`}
+            </Text>
+            )}
+            </>
             ) : (
               label({ color, focused })
             )}
