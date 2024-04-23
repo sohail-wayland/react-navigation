@@ -12,7 +12,9 @@ import {
   TextStyle,
   View,
   ViewStyle,
+  useColorScheme,
 } from 'react-native';
+
 
 type Props = {
   /**
@@ -161,6 +163,7 @@ const LinkPressable = ({
  */
 export default function DrawerItem(props: Props) {
   const { colors } = useTheme();
+  const scheme = useColorScheme();
 
   const {
     icon,
@@ -188,13 +191,10 @@ export default function DrawerItem(props: Props) {
     AsyncStorage.getItem(`friendlyName_${label}`).then(storedFriendlyName => {
       if (storedFriendlyName) {
         setFriendlyName(storedFriendlyName);
-      } else {
-        setFriendlyName(label); // Set friendlyName to label if no stored friendlyName
       }
     });
   }, [label]);
 
-  const [baseName, setBaseName] = React.useState(label);
   const [friendlyName, setFriendlyName] = React.useState('');
   const [isEditing, setIsEditing] = React.useState(false);
 
@@ -214,6 +214,22 @@ export default function DrawerItem(props: Props) {
     : inactiveBackgroundColor;
 
   const iconNode = icon ? icon({ size: 24, focused, color }) : null;
+
+  const getFriendlyColour = () => {
+    if (scheme === 'dark') {
+        if (focused) {
+            return '#D3D3D3';
+        } else {
+            return '#696969';
+        }
+    } else {
+        if (focused) {
+            return '#D8D8D8';
+        } else {
+            return '#B0B0B0';
+        }
+    }
+  }
 
   return (
     <View
@@ -240,7 +256,7 @@ export default function DrawerItem(props: Props) {
           <View
             style={[
               styles.label,
-              { marginLeft: iconNode ? 32 : 0, marginVertical: 5, flexDirection: 'row', gap: 6, alignItems: 'center'}
+              { marginLeft: iconNode ? 32 : 0, marginVertical: 5, flexDirection: 'row', gap: 5, alignItems: 'center'}
             ]}
           >
             {typeof label === 'string' ? (
@@ -268,7 +284,7 @@ export default function DrawerItem(props: Props) {
                     blurOnSubmit
                     style={[
                         {
-                            color,
+                            color: getFriendlyColour(),
                             fontFamily: "AkhandSoft-Semibold",
                             fontSize: 18,
                             lineHeight: 18 * 1.1,
@@ -285,7 +301,7 @@ export default function DrawerItem(props: Props) {
                 allowFontScaling={allowFontScaling}
                 style={[
                 {
-                    color,
+                    color: getFriendlyColour(),
                     fontFamily: "AkhandSoft-Semibold",
                     fontSize: 18,
                     lineHeight: 18 * 1.1,
